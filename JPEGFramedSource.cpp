@@ -3,6 +3,7 @@
 #include <sys/time.h>
 
 #include <algorithm>
+#include <string>
 
 JPEGFramedSource *
 JPEGFramedSource::createNew(UsageEnvironment& env,
@@ -133,4 +134,57 @@ u_int8_t JPEGFramedSource::width()
 u_int8_t JPEGFramedSource::height()
 {
     return parser.height();
+}
+
+
+// JPEGRTPSink
+
+JPEGRTPSink* JPEGRTPSink::createNew(UsageEnvironment& env, Groupsock* RTPgs)
+{
+    return new JPEGRTPSink(env, RTPgs);
+}
+
+JPEGRTPSink::~JPEGRTPSink()
+{
+    printf("~JPEGRTPSink()");
+};
+
+JPEGRTPSink::JPEGRTPSink(UsageEnvironment& env, Groupsock* RTPgs)
+    : VideoRTPSink(env, RTPgs, 26, 90000, "JPEG")
+{
+    int x = 0;
+}
+char* JPEGRTPSink::rtpmapLine() const
+{
+    if (rtpPayloadType() == 26) {
+        char* encodingParamsPart;
+        if (numChannels() != 1) {
+          encodingParamsPart = new char[1 + 20 /* max int len */];
+          sprintf(encodingParamsPart, "/%d", numChannels());
+        } else {
+          encodingParamsPart = strDup("");
+        }
+        char const* const rtpmapFmt = "a=rtpmap:%d %s/%d%s\r\n";
+        unsigned rtpmapLineSize = strlen(rtpmapFmt)
+                                  + 3 /* max char len */ + strlen(rtpPayloadFormatName())
+                                  + 20 /* max int len */ + strlen(encodingParamsPart);
+        char* rtpmapLine = new char[rtpmapLineSize];
+        sprintf(rtpmapLine, rtpmapFmt,
+                rtpPayloadType(), rtpPayloadFormatName(),
+                rtpTimestampFrequency(), encodingParamsPart);
+        delete[] encodingParamsPart;
+
+        return rtpmapLine;
+    } else {
+        // The payload format is static, so there's no "a=rtpmap:" line:
+        return strDup("");
+    }
+}
+
+const char* JPEGRTPSink::auxSDPLine()
+{
+    std::string aux_line = "a=framesize:26 640-480\r\n";
+    char* rtpmapLine = new char[aux_line.length() + 1];
+    strncpy(rtpmapLine, aux_line.c_str(), aux_line.size() + 1);
+    return rtpmapLine;
 }

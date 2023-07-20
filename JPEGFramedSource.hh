@@ -4,6 +4,8 @@
 #include "JPEGVideoSource.hh"
 #include "JpegFrameParser.hh"
 
+#include <SimpleRTPSink.hh>
+#include <VideoRTPSink.hh>
 #include <exception>
 
 #define MAX_JPEG_FILE_SZ 200000
@@ -51,6 +53,21 @@ private:
     unsigned char *jpeg_dat;
     size_t jpeg_datlen;
 
+};
+
+class JPEGRTPSink : public VideoRTPSink
+{
+  public:
+    static JPEGRTPSink* createNew(UsageEnvironment& env, Groupsock* RTPgs);
+
+    ~JPEGRTPSink() override;
+
+  protected:
+    JPEGRTPSink(UsageEnvironment& env, Groupsock* RTPgs);
+
+  public:
+    const char* auxSDPLine() override;
+    char* rtpmapLine() const override;
 };
 
 #endif // _WEBCAM_JPEG_DEVICE_SOURCE_HH

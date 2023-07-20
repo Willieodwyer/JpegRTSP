@@ -3,7 +3,7 @@ project(JpegStreamer)
 
 set(CMAKE_CXX_STANDARD 17)
 
-set(OUR_LIVE555 OFF)
+set(OUR_LIVE555 ON)
 
 if (OUR_LIVE555)
     add_compile_definitions(NO_OPENSSL OUR_LIVE555)
@@ -27,6 +27,8 @@ add_executable(JpegStreamer
         JpegFrameParser.hh
         JPEGFramedSource.cpp
         JPEGFramedSource.hh
+        JPEGUnicastSubsession.cpp
+        JPEGUnicastSubsession.h
         main.cpp)
 
 if (OUR_LIVE555)
