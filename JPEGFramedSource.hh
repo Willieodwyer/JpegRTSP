@@ -12,17 +12,17 @@ class DeviceException : public std::exception {
     
 };
 
-class JPEGDeviceSource: public JPEGVideoSource {
+class JPEGFramedSource : public JPEGVideoSource {
 public:
-    static JPEGDeviceSource* createNew(UsageEnvironment& env,
+    static JPEGFramedSource * createNew(UsageEnvironment& env,
                                        unsigned timePerFrame);
     // "timePerFrame" is in microseconds
 
 protected:
-    JPEGDeviceSource(UsageEnvironment& env,
+    JPEGFramedSource(UsageEnvironment& env,
                      int fd, unsigned timePerFrame);
     // called only by createNew()
-    virtual ~JPEGDeviceSource();
+    virtual ~JPEGFramedSource();
 
 private:
     // redefined virtual functions:

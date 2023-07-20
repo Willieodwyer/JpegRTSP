@@ -5,7 +5,7 @@
 #include "liveMedia.hh"
 
 #include "BasicUsageEnvironment.hh"
-#include "JPEGDeviceSource.hh"
+#include "JPEGFramedSource.hh"
 
 UsageEnvironment *env;
 char *progName;
@@ -55,7 +55,7 @@ void play() {
 
   // Open the webcam
   unsigned timePerFrame = 1000000 / fps;// microseconds
-  sessionState.source = JPEGDeviceSource::createNew(*env, timePerFrame);
+  sessionState.source = JPEGFramedSource::createNew(*env, timePerFrame);
   if (sessionState.source == NULL) {
     *env << "Unable to open webcam: "
          << env->getResultMsg() << "\n";
@@ -80,9 +80,7 @@ void play() {
   const Port rtcpPort(rtcpPortNum);
 
   sessionState.rtpGroupsock = new Groupsock(*env, destinationAddress, rtpPort, ttl);
-  sessionState.rtpGroupsock->multicastSendOnly();// we're a SSM source
   sessionState.rtcpGroupsock = new Groupsock(*env, destinationAddress, rtcpPort, ttl);
-  sessionState.rtcpGroupsock->multicastSendOnly();// we're a SSM source
 
   // Create an appropriate RTP sink from the RTP 'groupsock':
   sessionState.sink = JPEGVideoRTPSink::createNew(*env, sessionState.rtpGroupsock);
@@ -99,7 +97,7 @@ void play() {
   sessionState.rtcpInstance = RTCPInstance::createNew(*env, sessionState.rtcpGroupsock,
                                                       totalSessionBandwidth, CNAME,
                                                       sessionState.sink, NULL /* we're a server */,
-                                                      True /* we're a SSM source*/);
+                                                      False /* we're a SSM source*/);
   // Note: This starts RTCP running automatically
 
   // Create and start a RTSP server to serve this stream:
@@ -109,7 +107,7 @@ void play() {
     exit(1);
   }
   ServerMediaSession *sms = ServerMediaSession::createNew(*env, NULL, progName,
-                                                          "Session streamed by the Webcam", True /*SSM*/);
+                                                          "Session streamed by the Webcam", False);
   sms->addSubsession(PassiveServerMediaSubsession ::createNew(*sessionState.sink));
   sessionState.rtspServer->addServerMediaSession(sms);
 

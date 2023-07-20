@@ -1,22 +1,21 @@
-#include "JPEGDeviceSource.hh"
-#include <sys/time.h>
+#include "JPEGFramedSource.hh"
 #include <sys/mman.h>
+#include <sys/time.h>
 
 #include <algorithm>
 
-JPEGDeviceSource*
-JPEGDeviceSource::createNew(UsageEnvironment& env,
+JPEGFramedSource *
+JPEGFramedSource::createNew(UsageEnvironment& env,
                             unsigned timePerFrame) {
     int fd = -1;
     try {
-        return new JPEGDeviceSource(env, fd, timePerFrame);
+        return new JPEGFramedSource(env, fd, timePerFrame);
     } catch (DeviceException) {
         return NULL;
     }
 }
 
-JPEGDeviceSource
-::JPEGDeviceSource(UsageEnvironment& env, int fd, unsigned timePerFrame)
+JPEGFramedSource ::JPEGFramedSource(UsageEnvironment& env, int fd, unsigned timePerFrame)
   : JPEGVideoSource(env), fFd(fd), fTimePerFrame(timePerFrame)
 {
     jpeg_dat = new unsigned char [MAX_JPEG_FILE_SZ];
@@ -29,7 +28,7 @@ JPEGDeviceSource
     fclose(fp);
 }
 
-JPEGDeviceSource::~JPEGDeviceSource()
+JPEGFramedSource::~JPEGFramedSource()
 {
     delete [] jpeg_dat;
 }
@@ -60,7 +59,7 @@ static float timeval_diff(struct timeval *x, struct timeval *y)
 
 static struct timezone Idunno;
 
-void JPEGDeviceSource::doGetNextFrame()
+void JPEGFramedSource::doGetNextFrame()
 {
     static unsigned long framecount = 0;
     static struct timeval starttime;
@@ -96,7 +95,7 @@ static unsigned char calcQ(unsigned char const *qt)
     return (unsigned char) q;
 }
 
-size_t JPEGDeviceSource::jpeg_to_rtp(void *pto, void *pfrom, size_t len)
+size_t JPEGFramedSource::jpeg_to_rtp(void *pto, void *pfrom, size_t len)
 {
     unsigned char *to=(unsigned char*)pto, *from=(unsigned char*)pfrom;
     unsigned int datlen;
@@ -110,28 +109,28 @@ size_t JPEGDeviceSource::jpeg_to_rtp(void *pto, void *pfrom, size_t len)
     return 0;
 }
 
-u_int8_t const * JPEGDeviceSource::quantizationTables(u_int8_t & precision, u_int16_t & length)
+u_int8_t const *JPEGFramedSource::quantizationTables(u_int8_t & precision, u_int16_t & length)
 {
     precision = parser.precision();
     return parser.quantizationTables(length);
 }
 
-u_int8_t JPEGDeviceSource::type()
+u_int8_t JPEGFramedSource::type()
 {
     return parser.type();
 }
 
-u_int8_t JPEGDeviceSource::qFactor()
+u_int8_t JPEGFramedSource::qFactor()
 {
     return 128;
 }
 
-u_int8_t JPEGDeviceSource::width()
+u_int8_t JPEGFramedSource::width()
 {
     return parser.width();
 }
 
-u_int8_t JPEGDeviceSource::height()
+u_int8_t JPEGFramedSource::height()
 {
     return parser.height();
 }

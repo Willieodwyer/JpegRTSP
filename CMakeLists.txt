@@ -25,8 +25,8 @@ endif ()
 add_executable(JpegStreamer
         JpegFrameParser.cpp
         JpegFrameParser.hh
-        JPEGDeviceSource.cpp
-        JPEGDeviceSource.hh
+        JPEGFramedSource.cpp
+        JPEGFramedSource.hh
         main.cpp)
 
 if (OUR_LIVE555)
