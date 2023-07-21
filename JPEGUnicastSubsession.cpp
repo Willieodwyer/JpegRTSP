@@ -4,6 +4,7 @@
 
 #include "JPEGUnicastSubsession.h"
 #include "JPEGFramedSource.hh"
+#include <JPEGVideoRTPSink.hh>
 JPEGServerMediaSubsession* JPEGServerMediaSubsession::createNew(UsageEnvironment& env, const char* fileName)
 {
   try

@@ -4,6 +4,7 @@
 #include "JPEGVideoSource.hh"
 #include "JpegFrameParser.hh"
 
+#include <JPEGVideoRTPSink.hh>
 #include <SimpleRTPSink.hh>
 #include <VideoRTPSink.hh>
 #include <exception>
@@ -55,7 +56,7 @@ private:
 
 };
 
-class JPEGRTPSink : public VideoRTPSink
+class JPEGRTPSink : public JPEGVideoRTPSink
 {
   public:
     static JPEGRTPSink* createNew(UsageEnvironment& env, Groupsock* RTPgs);

@@ -12,7 +12,9 @@ public:
     unsigned char height()    { return _height; }
     unsigned char type()      { return _type; }
     unsigned char precision() { return _precision; }
-    unsigned char qFactor()   { return _qFactor; }
+    unsigned char qFactor()   {
+      return _qFactor;
+    }
     void setQ(unsigned char q) { _qFactor =q; }
     unsigned short restartInterval() { return _restartInterval; }
     

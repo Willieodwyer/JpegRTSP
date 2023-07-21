@@ -3,7 +3,10 @@
 #include <sys/time.h>
 
 #include <algorithm>
+#include <chrono>
 #include <string>
+
+#include "GstJpegParser.h"
 
 JPEGFramedSource *
 JPEGFramedSource::createNew(UsageEnvironment& env,
@@ -64,6 +67,11 @@ void JPEGFramedSource::doGetNextFrame()
 {
     static unsigned long framecount = 0;
     static struct timeval starttime;
+
+    auto ms =
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+
+    gst_rtp_jpeg_pay_handle_buffer(fTo, jpeg_dat, jpeg_datlen, ms.count());
     
     fFrameSize = jpeg_to_rtp(fTo, jpeg_dat, jpeg_datlen);
     gettimeofday(&fLastCaptureTime, &Idunno);
@@ -110,7 +118,7 @@ size_t JPEGFramedSource::jpeg_to_rtp(void *pto, void *pfrom, size_t len)
     return 0;
 }
 
-u_int8_t const *JPEGFramedSource::quantizationTables(u_int8_t & precision, u_int16_t & length)
+const u_int8_t* JPEGFramedSource::quantizationTables(u_int8_t& precision, u_int16_t& length)
 {
     precision = parser.precision();
     return parser.quantizationTables(length);
@@ -149,13 +157,11 @@ JPEGRTPSink::~JPEGRTPSink()
     printf("~JPEGRTPSink()");
 };
 
-JPEGRTPSink::JPEGRTPSink(UsageEnvironment& env, Groupsock* RTPgs)
-    : VideoRTPSink(env, RTPgs, 26, 90000, "JPEG")
-{
-    int x = 0;
-}
+JPEGRTPSink::JPEGRTPSink(UsageEnvironment& env, Groupsock* RTPgs) : JPEGVideoRTPSink(env, RTPgs) {}
+
 char* JPEGRTPSink::rtpmapLine() const
 {
+    //return RTPSink::rtpmapLine();
     if (rtpPayloadType() == 26) {
         char* encodingParamsPart;
         if (numChannels() != 1) {
@@ -183,7 +189,9 @@ char* JPEGRTPSink::rtpmapLine() const
 
 const char* JPEGRTPSink::auxSDPLine()
 {
-    std::string aux_line = "a=framesize:26 640-480\r\n";
+    std::string aux_line = "a=framesize:26 640-480\r\n" // TODO
+                           "a=framerate:25.000000\r\n";
+
     char* rtpmapLine = new char[aux_line.length() + 1];
     strncpy(rtpmapLine, aux_line.c_str(), aux_line.size() + 1);
     return rtpmapLine;

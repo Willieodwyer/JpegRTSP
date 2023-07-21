@@ -29,7 +29,7 @@ add_executable(JpegStreamer
         JPEGFramedSource.hh
         JPEGUnicastSubsession.cpp
         JPEGUnicastSubsession.h
-        main.cpp)
+        main.cpp GstJpegParser.h)
 
 if (OUR_LIVE555)
     target_link_libraries(JpegStreamer live555)
