@@ -23,7 +23,7 @@ JPEGFramedSource ::JPEGFramedSource(UsageEnvironment& env, int fd, unsigned time
   : JPEGVideoSource(env), fFd(fd), fTimePerFrame(timePerFrame)
 {
     jpeg_dat = new unsigned char [MAX_JPEG_FILE_SZ];
-    FILE *fp = fopen("test.jpg", "rb");
+    FILE *fp = fopen("image.jpg", "rb");
     if(fp==NULL) {
         env.setResultErrMsg("could not open test.jpg.\n");
         throw DeviceException();
@@ -73,7 +73,7 @@ void JPEGFramedSource::doGetNextFrame()
 
     gst_rtp_jpeg_pay_handle_buffer(fTo, jpeg_dat, jpeg_datlen, ms.count());
     
-    fFrameSize = jpeg_to_rtp(fTo, jpeg_dat, jpeg_datlen);
+    //fFrameSize = jpeg_to_rtp(fTo, jpeg_dat, jpeg_datlen);
     gettimeofday(&fLastCaptureTime, &Idunno);
     if(framecount==0)
         starttime = fLastCaptureTime;
@@ -189,7 +189,7 @@ char* JPEGRTPSink::rtpmapLine() const
 
 const char* JPEGRTPSink::auxSDPLine()
 {
-    std::string aux_line = "a=framesize:26 640-480\r\n" // TODO
+    std::string aux_line = "a=framesize:26 534-400\r\n" // TODO
                            "a=framerate:25.000000\r\n";
 
     char* rtpmapLine = new char[aux_line.length() + 1];
