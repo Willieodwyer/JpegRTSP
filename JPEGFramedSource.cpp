@@ -8,6 +8,9 @@
 
 #include "GstJpegParser.h"
 
+
+#define IMAGE "image.jpg"
+
 JPEGFramedSource *
 JPEGFramedSource::createNew(UsageEnvironment& env,
                             unsigned timePerFrame) {
@@ -23,10 +26,14 @@ JPEGFramedSource ::JPEGFramedSource(UsageEnvironment& env, int fd, unsigned time
   : JPEGVideoSource(env), fFd(fd), fTimePerFrame(timePerFrame)
 {
     jpeg_dat = new unsigned char [MAX_JPEG_FILE_SZ];
-    FILE *fp = fopen("image.jpg", "rb");
+    FILE *fp = fopen(IMAGE, "rb");
     if(fp==NULL) {
-        env.setResultErrMsg("could not open test.jpg.\n");
+        env.setResultErrMsg("could not open " IMAGE "\n");
         throw DeviceException();
+    }
+    else
+    {
+        printf("Successfully opened: " IMAGE "\n");
     }
     jpeg_datlen = fread(jpeg_dat, 1, MAX_JPEG_FILE_SZ, fp);
     fclose(fp);
@@ -154,7 +161,7 @@ JPEGRTPSink* JPEGRTPSink::createNew(UsageEnvironment& env, Groupsock* RTPgs)
 
 JPEGRTPSink::~JPEGRTPSink()
 {
-    printf("~JPEGRTPSink()");
+    printf("~JPEGRTPSink()\n");
 };
 
 JPEGRTPSink::JPEGRTPSink(UsageEnvironment& env, Groupsock* RTPgs) : JPEGVideoRTPSink(env, RTPgs) {}

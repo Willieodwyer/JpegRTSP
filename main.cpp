@@ -3,6 +3,7 @@
 
 #include "GroupsockHelper.hh"
 #include "liveMedia.hh"
+#include <iostream>
 
 #include "BasicUsageEnvironment.hh"
 #include "JPEGFramedSource.hh"
@@ -16,7 +17,7 @@ void play(); // forward
 
 void usage()
 {
-  *env << "Usage: " << progName << " <frames-per-second>\n";
+  std::cerr << "Usage: " << progName << " <frames-per-second>\n";
   exit(1);
 }
 

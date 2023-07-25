@@ -49,7 +49,7 @@ private:
     unsigned fTimePerFrame;
     struct timeval fLastCaptureTime;
 
-    //JpegFrameParser parser;
+    JpegFrameParser parser;
     
     unsigned char *jpeg_dat;
     size_t jpeg_datlen;

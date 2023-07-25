@@ -612,7 +612,7 @@ static inline int gst_rtp_jpeg_pay_handle_buffer(const uint8_t* basepayload, con
       quant_header.precision |= (qsize == 64 ? 0 : (1 << i));
       quant_data_size += qsize;
     }
-    quant_header.length = htons (quant_data_size);
+    quant_header.length = quant_data_size;
     quant_data_size += sizeof (quant_header);
   }
 
@@ -626,6 +626,23 @@ static inline int gst_rtp_jpeg_pay_handle_buffer(const uint8_t* basepayload, con
     bytes_left += sizeof (restart_marker_header);
 
   max_payload_size = mtu - (RTP_HEADER_LEN + sizeof (jpeg_header));
+
+
+  /* copy the quant tables for luma and chrominance */
+  for (i = 0; i < 2; i++) {
+    uint qsize;
+    uint qt;
+
+    qt = info[i].qt;
+    qsize = tables[qt].size;
+    //memcpy (payload, tables[qt].data, qsize);
+
+    printf("component %d using quant %d, size %d", i, qt, qsize);
+
+    //payload += qsize;
+  }
+
+  int x = 0;
 
 //  list = gst_buffer_list_new_sized ((bytes_left / max_payload_size) + 1);
 //
@@ -726,8 +743,8 @@ static inline int gst_rtp_jpeg_pay_handle_buffer(const uint8_t* basepayload, con
 //
 //    bytes_left -= payload_size;
 //    offset += payload_size;
-  }
-  while (!frame_done);
+//  }
+//  while (!frame_done);
 //  /* push the whole buffer list at once */
 //  ret = gst_rtp_base_payload_push_list (basepayload, list);
 //
