@@ -8,10 +8,24 @@
 #define GST_ROUND_UP_8(num) (((num) + 7) & ~7)
 #define G_N_ELEMENTS(arr) (sizeof(arr) / sizeof((arr)[0]))
 
+#define DEFAULT_JPEG_QUANT    255
+
+#define DEFAULT_JPEG_QUALITY  255
+#define DEFAULT_JPEG_TYPE     1
+
+#define RTP_HEADER_LEN 12
+
+#define GST_RTP_HEADER_LEN 12
+
 int print_error(const char* error)
 {
   fprintf(stderr, "%s", error);
   return -1;
+}
+
+uint gst_rtp_buffer_calc_header_len (uint8_t csrc_count)
+{
+  return GST_RTP_HEADER_LEN + (csrc_count * sizeof (uint32_t));
 }
 
 /*
@@ -127,6 +141,15 @@ typedef struct
 
 struct GstRtpJPEGPay
 {
+  GstRtpJPEGPay()
+  {
+    quality = DEFAULT_JPEG_QUALITY;
+    quant   = DEFAULT_JPEG_QUANT;
+    type    = DEFAULT_JPEG_TYPE;
+    width   = -1;
+    height  = -1;
+    payload = nullptr;
+  }
   const uint8_t* payload;
 
   uint8_t quality;
@@ -460,13 +483,14 @@ no_table : {
 static inline int gst_rtp_jpeg_pay_handle_buffer(const uint8_t* basepayload, const uint8_t* buffer, uint32_t total_size, uint64_t timestamp)
 {
   GstRtpJPEGPay* pay = new GstRtpJPEGPay();
+
   RtpJpegHeader jpeg_header;
   RtpQuantHeader quant_header;
   RtpRestartMarkerHeader restart_marker_header;
   RtpQuantTable tables[15] = { {0, NULL}, };
   CompInfo info[3] = { {0,}, };
   uint quant_data_size;
-  uint mtu, max_payload_size;
+  uint mtu = total_size, max_payload_size;
   uint bytes_left;
   uint jpeg_header_size = 0;
   uint offset = 0;
@@ -592,17 +616,17 @@ static inline int gst_rtp_jpeg_pay_handle_buffer(const uint8_t* basepayload, con
     quant_data_size += sizeof (quant_header);
   }
 
-  int x = 0;
-//  GST_LOG_OBJECT (pay, "quant_data size %u", quant_data_size);
-//
-//  bytes_left =
-//      sizeof (jpeg_header) + quant_data_size + total_size -
-//      jpeg_header_size;
-//
-//  if (dri_found)
-//    bytes_left += sizeof (restart_marker_header);
-//
-//  max_payload_size = mtu - (RTP_HEADER_LEN + sizeof (jpeg_header));
+  printf("quant_data size %u\n", quant_data_size);
+
+  bytes_left =
+      sizeof (jpeg_header) + quant_data_size + total_size -
+      jpeg_header_size;
+
+  if (dri_found)
+    bytes_left += sizeof (restart_marker_header);
+
+  max_payload_size = mtu - (RTP_HEADER_LEN + sizeof (jpeg_header));
+
 //  list = gst_buffer_list_new_sized ((bytes_left / max_payload_size) + 1);
 //
 //  frame_done = false;
@@ -702,8 +726,8 @@ static inline int gst_rtp_jpeg_pay_handle_buffer(const uint8_t* basepayload, con
 //
 //    bytes_left -= payload_size;
 //    offset += payload_size;
-//  }
-//  while (!frame_done);
+  }
+  while (!frame_done);
 //  /* push the whole buffer list at once */
 //  ret = gst_rtp_base_payload_push_list (basepayload, list);
 //
