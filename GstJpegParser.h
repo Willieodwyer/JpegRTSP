@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <stdio.h>
+#include <vector>
 
 #define GST_ROUND_UP_8(num) (((num) + 7) & ~7)
 #define G_N_ELEMENTS(arr) (sizeof(arr) / sizeof((arr)[0]))
@@ -17,10 +18,10 @@
 
 #define GST_RTP_HEADER_LEN 12
 
-int print_error(const char* error)
+uint8_t* print_error(const char* error)
 {
   fprintf(stderr, "%s", error);
-  return -1;
+  return nullptr;
 }
 
 uint gst_rtp_buffer_calc_header_len (uint8_t csrc_count)
@@ -480,26 +481,22 @@ no_table : {
 }
 }
 
-static inline int gst_rtp_jpeg_pay_handle_buffer(const uint8_t* basepayload, const uint8_t* buffer, uint32_t total_size, uint64_t timestamp)
+static inline uint8_t* gst_rtp_jpeg_pay_handle_buffer(const uint8_t*        buffer,
+                                                            uint32_t              total_size,
+                                                            uint64_t              timestamp,
+                                                            std::vector<uint8_t>& quantisation,
+                                                            unsigned&             precision)
 {
-  GstRtpJPEGPay* pay = new GstRtpJPEGPay();
+  GstRtpJPEGPay pay;
 
-  RtpJpegHeader jpeg_header;
-  RtpQuantHeader quant_header;
   RtpRestartMarkerHeader restart_marker_header;
   RtpQuantTable tables[15] = { {0, NULL}, };
   CompInfo info[3] = { {0,}, };
   uint quant_data_size;
-  uint mtu = total_size, max_payload_size;
-  uint bytes_left;
   uint jpeg_header_size = 0;
   uint offset = 0;
-  bool frame_done;
   bool sos_found, sof_found, dqt_found, dri_found;
   int i = 0;
-//  GstBufferList *list = NULL;
-
-  pay->payload = basepayload;
 
   printf(" ---- got buffer size %ld, timestamp %ld\n", total_size, timestamp);
 
@@ -525,7 +522,7 @@ static inline int gst_rtp_jpeg_pay_handle_buffer(const uint8_t* basepayload, con
     case JPEG_MARKER_SOF:
       printf ("SOF found\n");
       sof_found = true;
-      if (!gst_rtp_jpeg_pay_read_sof (pay, buffer, total_size, offset, info))
+      if (!gst_rtp_jpeg_pay_read_sof (&pay, buffer, total_size, offset, info))
         print_error("invalid_format");
       break;
     case JPEG_MARKER_DQT:
@@ -548,7 +545,7 @@ static inline int gst_rtp_jpeg_pay_handle_buffer(const uint8_t* basepayload, con
       break;
     case JPEG_MARKER_DRI:
       printf("DRI found\n");
-      if (gst_rtp_jpeg_pay_read_dri (pay, buffer, total_size, offset, &restart_marker_header))
+      if (gst_rtp_jpeg_pay_read_dri (&pay, buffer, total_size, offset, &restart_marker_header))
         dri_found = true;
       break;
     default:
@@ -569,7 +566,7 @@ static inline int gst_rtp_jpeg_pay_handle_buffer(const uint8_t* basepayload, con
     return print_error("unsupported_jpeg");
   /* by now we should either have negotiated the width/height or the SOF header
    * should have filled us in */
-  if (pay->width < 0 || pay->height < 0)
+  if (pay.width < 0 || pay.height < 0)
   {
     return print_error("no_dimension");
   }
@@ -579,22 +576,11 @@ static inline int gst_rtp_jpeg_pay_handle_buffer(const uint8_t* basepayload, con
   offset = 0;
 
   if (dri_found)
-    pay->type += 64;
+    pay.type += 64;
 
-  /* prepare stuff for the jpeg header */
-
-  jpeg_header.type_spec = 0;
-  jpeg_header.type = pay->type;
-  jpeg_header.q = pay->quant;
-  jpeg_header.width = pay->width;
-  jpeg_header.height = pay->height;
-  /* collect the quant headers sizes */
-  quant_header.mbz = 0;
-  quant_header.precision = 0;
-  quant_header.length = 0;
   quant_data_size = 0;
 
-  if (pay->quant > 127) {
+  if (pay.quant > 127) {
     /* for the Y and U component, look up the quant table and its size. quant
      * tables for U and V should be the same */
     for (i = 0; i < 2; i++) {
@@ -609,24 +595,13 @@ static inline int gst_rtp_jpeg_pay_handle_buffer(const uint8_t* basepayload, con
       if (qsize == 0)
         print_error("invalid_quant");
 
-      quant_header.precision |= (qsize == 64 ? 0 : (1 << i));
+      precision |= (qsize == 64 ? 0 : (1 << i));
       quant_data_size += qsize;
     }
-    quant_header.length = quant_data_size;
-    quant_data_size += sizeof (quant_header);
   }
 
   printf("quant_data size %u\n", quant_data_size);
-
-  bytes_left =
-      sizeof (jpeg_header) + quant_data_size + total_size -
-      jpeg_header_size;
-
-  if (dri_found)
-    bytes_left += sizeof (restart_marker_header);
-
-  max_payload_size = mtu - (RTP_HEADER_LEN + sizeof (jpeg_header));
-
+  quantisation.reserve(quant_data_size);
 
   /* copy the quant tables for luma and chrominance */
   for (i = 0; i < 2; i++) {
@@ -634,148 +609,14 @@ static inline int gst_rtp_jpeg_pay_handle_buffer(const uint8_t* basepayload, con
     uint qt;
 
     qt = info[i].qt;
-    qsize = tables[qt].size;
-    //memcpy (payload, tables[qt].data, qsize);
+    quantisation.insert(quantisation.end(), tables[qt].data, tables[qt].data + tables[qt].size);
 
     printf("component %d using quant %d, size %d", i, qt, qsize);
 
     //payload += qsize;
   }
 
-  int x = 0;
-
-//  list = gst_buffer_list_new_sized ((bytes_left / max_payload_size) + 1);
-//
-//  frame_done = false;
-//  do {
-//    GstBuffer *outbuf;
-//    uint8 *payload;
-//    uint payload_size;
-//    uint header_size;
-//    GstBuffer *paybuf;
-//    GstRTPBuffer rtp = { NULL };
-//    uint rtp_header_size = gst_rtp_buffer_calc_header_len (0);
-//
-//    *//* The available room is the packet MTU, minus the RTP header length. *//*
-//    payload_size =
-//        (bytes_left < (mtu - rtp_header_size) ? bytes_left :
-//                                              (mtu - rtp_header_size));
-//
-//    header_size = sizeof (jpeg_header) + quant_data_size;
-//    if (dri_found)
-//      header_size += sizeof (restart_marker_header);
-//
-//    outbuf =
-//        gst_rtp_base_payload_allocate_output_buffer (basepayload, header_size,
-//                                                    0, 0);
-//
-//    gst_rtp_buffer_map (outbuf, GST_MAP_WRITE, &rtp);
-//
-//    if (payload_size == bytes_left) {
-//      GST_LOG_OBJECT (pay, "last packet of frame");
-//      frame_done = true;
-//      gst_rtp_buffer_set_marker (&rtp, 1);
-//    }
-//
-//    payload = gst_rtp_buffer_get_payload (&rtp);
-//
-//    /* update offset */
-//#if (G_BYTE_ORDER == G_LITTLE_ENDIAN)
-//    jpeg_header.offset = ((offset & 0x0000FF) << 16) |
-//                         ((offset & 0xFF0000) >> 16) | (offset & 0x00FF00);
-//#else
-//    jpeg_header.offset = offset;
-//#endif
-//    memcpy (payload, &jpeg_header, sizeof (jpeg_header));
-//    payload += sizeof (jpeg_header);
-//    payload_size -= sizeof (jpeg_header);
-//
-//    if (dri_found) {
-//      memcpy (payload, &restart_marker_header, sizeof (restart_marker_header));
-//      payload += sizeof (restart_marker_header);
-//      payload_size -= sizeof (restart_marker_header);
-//    }
-//
-//    /* only send quant table with first packet */
-//    if (G_UNLIKELY (quant_data_size > 0)) {
-//      memcpy (payload, &quant_header, sizeof (quant_header));
-//      payload += sizeof (quant_header);
-//
-//      /* copy the quant tables for luma and chrominance */
-//      for (i = 0; i < 2; i++) {
-//        uint qsize;
-//        uint qt;
-//
-//        qt = info[i].qt;
-//        qsize = tables[qt].size;
-//        memcpy (payload, tables[qt].data, qsize);
-//
-//        GST_LOG_OBJECT (pay, "component %d using quant %d, size %d", i, qt,
-//                       qsize);
-//
-//        payload += qsize;
-//      }
-//      payload_size -= quant_data_size;
-//      bytes_left -= quant_data_size;
-//      quant_data_size = 0;
-//    }
-//    GST_LOG_OBJECT (pay, "sending payload size %d", payload_size);
-//    gst_rtp_buffer_unmap (&rtp);
-//
-//    *//* create a new buf to hold the payload *//*
-//    paybuf = gst_buffer_copy_region (buffer, GST_BUFFER_COPY_ALL,
-//                                    jpeg_header_size + offset, payload_size);
-//
-//    *//* join memory parts *//*
-//    gst_rtp_copy_video_meta (pay, outbuf, paybuf);
-//    outbuf = gst_buffer_append (outbuf, paybuf);
-//
-//    GST_BUFFER_PTS (outbuf) = timestamp;
-//
-//    if (discont) {
-//      GST_BUFFER_FLAG_SET (outbuf, GST_BUFFER_FLAG_DISCONT);
-//      *//* Only the first outputted buffer has the DISCONT flag *//*
-//      discont = false;
-//    }
-//
-//    *//* and add to list *//*
-//    gst_buffer_list_insert (list, -1, outbuf);
-//
-//    bytes_left -= payload_size;
-//    offset += payload_size;
-//  }
-//  while (!frame_done);
-//  /* push the whole buffer list at once */
-//  ret = gst_rtp_base_payload_push_list (basepayload, list);
-//
-//  gst_buffer_memory_unmap (&memory);
-//  gst_buffer_unref (buffer);
-//
-//  return ret;
-//
-//  /* ERRORS */
-//unsupported_jpeg:
-//{
-//  GST_ELEMENT_WARNING (pay, STREAM, FORMAT, ("Unsupported JPEG"), (NULL));
-//  gst_buffer_memory_unmap (&memory);
-//  gst_buffer_unref (buffer);
-//  return GST_FLOW_OK;
-//}
-//no_dimension:
-//{
-//  GST_ELEMENT_WARNING (pay, STREAM, FORMAT, ("No size given"), (NULL));
-//  gst_buffer_memory_unmap (&memory);
-//  gst_buffer_unref (buffer);
-//  return GST_FLOW_OK;
-//}
-//invalid_quant:
-//{
-//  GST_ELEMENT_WARNING (pay, STREAM, FORMAT, ("Invalid quant tables"), (NULL));
-//  gst_buffer_memory_unmap (&memory);
-//  gst_buffer_unref (buffer);
-//  return GST_FLOW_OK;
-//}
-
+  return const_cast<uint8_t*>(buffer + jpeg_header_size);
 }
 
 #endif // JPEGSTREAMER_GSTJPEGPARSER_H

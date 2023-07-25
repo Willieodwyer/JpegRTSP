@@ -8,6 +8,7 @@
 #include <SimpleRTPSink.hh>
 #include <VideoRTPSink.hh>
 #include <exception>
+#include <vector>
 
 #define MAX_JPEG_FILE_SZ 200000
 
@@ -42,18 +43,16 @@ private:
         size_t  length;
     };
 
-    size_t jpeg_to_rtp(void *to, void *from, size_t len);
-    
+    std::vector<uint8_t> quantisation;
+    unsigned precision;
+
 private:
     int fFd;
     unsigned fTimePerFrame;
     struct timeval fLastCaptureTime;
 
-    JpegFrameParser parser;
-    
     unsigned char *jpeg_dat;
     size_t jpeg_datlen;
-
 };
 
 class JPEGRTPSink : public JPEGVideoRTPSink
