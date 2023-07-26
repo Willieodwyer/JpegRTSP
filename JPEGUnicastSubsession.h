@@ -10,7 +10,6 @@ public:
 private:
   JPEGServerMediaSubsession(UsageEnvironment& env, const char* fileName);
 
-
 private: // redefined virtual functions
   virtual FramedSource* createNewStreamSource(unsigned clientSessionId, unsigned& estBitrate);
   virtual RTPSink*      createNewRTPSink(Groupsock*    rtpGroupsock,

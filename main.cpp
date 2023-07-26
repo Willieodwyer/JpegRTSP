@@ -75,12 +75,7 @@ void play()
   TaskScheduler* scheduler = BasicTaskScheduler::createNew();
   env                      = BasicUsageEnvironment::createNew(*scheduler);
 
-  // OutPacketBuffer::numPacketsLimit = 100;
-  //  Allow for up to 100 RTP packets per JPEG frame
-
-  // Open the webcam
-  unsigned timePerFrame = 1000000 / fps; // microseconds
-  sessionState.source   = JPEGFramedSource::createNew(*env, timePerFrame);
+  sessionState.source = JPEGFramedSource::createNew(*env, fps);
   if (sessionState.source == NULL)
   {
     *env << "Unable to open webcam: " << env->getResultMsg() << "\n";

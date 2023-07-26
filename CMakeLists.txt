@@ -16,24 +16,24 @@ if (OUR_LIVE555)
     )
 
     add_subdirectory(/home/will/Core/ExternalLibraries/Live555 Live555)
-else()
+else ()
     include_directories(
             /usr/include/liveMedia /usr/include/groupsock /usr/include/BasicUsageEnvironment /usr/include/UsageEnvironment
     )
 endif ()
 
 add_executable(JpegStreamer
-        JpegFrameParser.cpp
-        JpegFrameParser.hh
-        JPEGFramedSource.cpp
         JPEGFramedSource.hh
-        JPEGUnicastSubsession.cpp
+        JPEGFramedSource.cpp
         JPEGUnicastSubsession.h
-        main.cpp GstJpegParser.h)
+        JPEGUnicastSubsession.cpp
+        JPEGParser.h
+        JPEGParser.cpp
+        main.cpp)
 
 if (OUR_LIVE555)
     target_link_libraries(JpegStreamer live555)
-else()
+else ()
     target_link_libraries(JpegStreamer liveMedia groupsock BasicUsageEnvironment UsageEnvironment)
 endif ()
 

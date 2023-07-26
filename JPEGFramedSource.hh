@@ -1,8 +1,7 @@
-#ifndef _WEBCAM_JPEG_DEVICE_SOURCE_HH
-#define _WEBCAM_JPEG_DEVICE_SOURCE_HH
+#pragma once
 
+#include "JPEGParser.h"
 #include "JPEGVideoSource.hh"
-#include "JpegFrameParser.hh"
 
 #include <JPEGVideoRTPSink.hh>
 #include <SimpleRTPSink.hh>
@@ -12,62 +11,52 @@
 
 #define MAX_JPEG_FILE_SZ 200000
 
-class DeviceException : public std::exception {
-    
-};
+class DeviceException : public std::exception
+{};
 
-class JPEGFramedSource : public JPEGVideoSource {
+class JPEGFramedSource : public JPEGVideoSource
+{
 public:
-    static JPEGFramedSource * createNew(UsageEnvironment& env,
-                                       unsigned timePerFrame);
-    // "timePerFrame" is in microseconds
+  static JPEGFramedSource* createNew(UsageEnvironment& env, unsigned timePerFrame);
 
 protected:
-    JPEGFramedSource(UsageEnvironment& env,
-                     int fd, unsigned timePerFrame);
-    // called only by createNew()
-    virtual ~JPEGFramedSource();
+  explicit JPEGFramedSource(UsageEnvironment& env, unsigned int framerate);
+  // called only by createNew()
+  virtual ~JPEGFramedSource();
 
 private:
-    // redefined virtual functions:
-    virtual void doGetNextFrame();
-    virtual u_int8_t type();
-    virtual u_int8_t qFactor();
-    virtual u_int8_t width();
-    virtual u_int8_t height();
-    virtual u_int8_t const * quantizationTables(u_int8_t & precision, u_int16_t & length);
+  // redefined virtual functions:
+  virtual void            doGetNextFrame() override;
+  virtual u_int8_t        type() override;
+  virtual u_int8_t        qFactor() override;
+  virtual u_int8_t        width() override;
+  virtual u_int8_t        height() override;
+  virtual u_int8_t const* quantizationTables(u_int8_t& precision, u_int16_t& length) override;
 
 private:
-    struct buffer {
-        void   *start;
-        size_t  length;
-    };
+  JpegParser::RtpJPEGPayload m_payload;
 
-    std::vector<uint8_t> quantisation;
-    unsigned precision;
+  std::vector<uint8_t> m_quantisation;
+  unsigned             m_precision;
 
 private:
-    int fFd;
-    unsigned fTimePerFrame;
-    struct timeval fLastCaptureTime;
-
-    unsigned char *jpeg_dat;
-    size_t jpeg_datlen;
+  unsigned char* jpeg_dat;
+  size_t         jpeg_datlen;
+  uint64_t       m_last_pts = 0;
+  unsigned int   m_framerate;
 };
 
 class JPEGRTPSink : public JPEGVideoRTPSink
 {
-  public:
-    static JPEGRTPSink* createNew(UsageEnvironment& env, Groupsock* RTPgs);
+public:
+  static JPEGRTPSink* createNew(UsageEnvironment& env, Groupsock* RTPgs);
 
-    ~JPEGRTPSink() override;
+  ~JPEGRTPSink() override;
 
-  protected:
-    JPEGRTPSink(UsageEnvironment& env, Groupsock* RTPgs);
+protected:
+  JPEGRTPSink(UsageEnvironment& env, Groupsock* RTPgs);
 
-  public:
-    const char* auxSDPLine() override;
-    char* rtpmapLine() const override;
+public:
+  const char* auxSDPLine() override;
+  char*       rtpmapLine() const override;
 };
-
-#endif // _WEBCAM_JPEG_DEVICE_SOURCE_HH
