@@ -56,7 +56,4 @@ public:
 protected:
   JPEGRTPSink(UsageEnvironment& env, Groupsock* RTPgs);
 
-public:
-  const char* auxSDPLine() override;
-  char*       rtpmapLine() const override;
 };
